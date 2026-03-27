@@ -308,6 +308,9 @@ class Bootstrap(object):
         "vscode": {
             "brew_cask": "visual-studio-code",
         },
+        "hammerspoon": {
+            "brew_cask": "hammerspoon",
+        },
         "oh-my-posh": {
             "brew": "oh-my-posh",
             "apt": "oh-my-posh",
@@ -337,8 +340,9 @@ class Bootstrap(object):
         },
     }
 
-    def __init__(self, dry_run=False):
+    def __init__(self, dry_run=False, only="all"):
         self.dry_run = dry_run
+        self.only = only
         self.home = Path.home()
         self.system = platform.system().lower()
 
@@ -390,6 +394,9 @@ class Bootstrap(object):
         self.alacritty_managed_file = self.alacritty_dir / "bootstrap-managed.toml"
         self.alacritty_colors_file = self.alacritty_dir / "bootstrap-colors.toml"
 
+        self.hammerspoon_dir = self.home / ".hammerspoon"
+        self.hammerspoon_init_file = self.hammerspoon_dir / "init.lua"
+
         self.nvim_dir = self.config_home / "nvim"
         self.zinit_home = self.data_home / "zinit" / "zinit.git"
 
@@ -401,6 +408,10 @@ class Bootstrap(object):
         self.install_alacritty = env.get("BOOTSTRAP_INSTALL_ALACRITTY", "1")
         self.install_rectangle = env.get("BOOTSTRAP_INSTALL_RECTANGLE", "1")
         self.install_stats = env.get("BOOTSTRAP_INSTALL_STATS", "0")
+        self.install_hammerspoon = env.get("BOOTSTRAP_INSTALL_HAMMERSPOON", "1")
+        self.alacritty_hotkey_enabled = env.get("BOOTSTRAP_ALACRITTY_HOTKEY", "1")
+        self.alacritty_hotkey_mods = env.get("BOOTSTRAP_ALACRITTY_HOTKEY_MODS", "ctrl,alt")
+        self.alacritty_hotkey_key = env.get("BOOTSTRAP_ALACRITTY_HOTKEY_KEY", "return")
 
         if not self.dry_run:
             self.backup_root.mkdir(parents=True, exist_ok=True)
@@ -409,23 +420,6 @@ class Bootstrap(object):
 
     def dry(self, msg):
         log("[DRY-RUN] {0}".format(msg))
-
-    def detect_distro_id(self):
-        if self.system != "linux":
-            return ""
-
-        os_release = Path("/etc/os-release")
-        if not os_release.exists():
-            return ""
-
-        data = {}
-        for line in os_release.read_text(encoding="utf-8", errors="ignore").splitlines():
-            if "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            data[k.strip()] = v.strip().strip('"').lower()
-
-        return data.get("ID", "")
 
     def detect_package_manager(self):
         if self.system == "darwin":
@@ -445,6 +439,23 @@ class Bootstrap(object):
             return "apk"
 
         raise RuntimeError("No supported package manager found")
+
+    def detect_distro_id(self):
+        if self.system != "linux":
+            return ""
+
+        os_release = Path("/etc/os-release")
+        if not os_release.exists():
+            return ""
+
+        data = {}
+        for line in os_release.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            data[k.strip()] = v.strip().strip('"').lower()
+
+        return data.get("ID", "")
 
     def resolve_package(self, key):
         mapping = self.PACKAGE_MATRIX.get(key, {})
@@ -472,6 +483,9 @@ class Bootstrap(object):
         parts = self.env.get("PATH", "").split(":")
         if path_value not in parts:
             self.env["PATH"] = "{0}:{1}".format(path_value, self.env.get("PATH", ""))
+
+    def module_enabled(self, name):
+        return self.only in ("all", name)
 
     # ---------- backups / writes ----------
 
@@ -769,18 +783,21 @@ class Bootstrap(object):
         if self.system == "darwin":
             if self.install_vscode == "1":
                 self.install_optional_app_cask("vscode", Path("/Applications/Visual Studio Code.app"))
-            if self.install_alacritty == "1":
-                self.install_optional_app_cask("alacritty", Path("/Applications/Alacritty.app"))
             if self.install_rectangle == "1":
                 self.install_optional_app_cask("rectangle", Path("/Applications/Rectangle.app"))
             if self.install_stats == "1":
                 self.install_optional_app_cask("stats", Path("/Applications/Stats.app"))
             self.ensure_jetbrains_nerd_font()
-        else:
-            if self.install_alacritty == "1":
-                pkg = self.resolve_package("alacritty")
-                if pkg:
-                    self.install_system_packages([pkg], soft_fail=True, cask=False)
+
+    def install_hotkey_dependencies(self):
+        if self.system != "darwin":
+            return
+
+        if self.install_alacritty == "1":
+            self.install_optional_app_cask("alacritty", Path("/Applications/Alacritty.app"))
+
+        if self.install_hammerspoon == "1" and self.alacritty_hotkey_enabled == "1":
+            self.install_optional_app_cask("hammerspoon", Path("/Applications/Hammerspoon.app"))
 
     def install_optional_app_cask(self, key, app_path):
         cask = self.resolve_package(key)
@@ -853,7 +870,7 @@ class Bootstrap(object):
             self.soft_failures.append("pip not available, skipping python user tools")
             return
 
-        for pkg in ("pipx", "uv", "yq", "you-get"):
+        for pkg in ("pipx", "uv"):
             ok = self.pip_install_user([pkg])
             if ok:
                 info("python user tool installed: {0}".format(pkg))
@@ -862,8 +879,6 @@ class Bootstrap(object):
                 self.soft_failures.append("python user tool install failed: {0}".format(pkg))
 
         self.prepend_path(self.home / ".local" / "bin")
-
-    # ---------- config / repos ----------
 
     def ensure_zinit(self):
         log("[6/8] managing zinit")
@@ -879,17 +894,17 @@ class Bootstrap(object):
         self.write_file_if_changed(
             self.nvim_dir / "lazyvim.json",
             """{
-  "extras": [
-    "lazyvim.plugins.extras.coding.yanky",
-    "lazyvim.plugins.extras.editor.fzf",
-    "lazyvim.plugins.extras.editor.mini-files",
-    "lazyvim.plugins.extras.lang.json",
-    "lazyvim.plugins.extras.lang.markdown",
-    "lazyvim.plugins.extras.lang.toml",
-    "lazyvim.plugins.extras.lang.yaml",
-    "lazyvim.plugins.extras.ui.mini-animate"
+  \"extras\": [
+    \"lazyvim.plugins.extras.coding.yanky\",
+    \"lazyvim.plugins.extras.editor.fzf\",
+    \"lazyvim.plugins.extras.editor.mini-files\",
+    \"lazyvim.plugins.extras.lang.json\",
+    \"lazyvim.plugins.extras.lang.markdown\",
+    \"lazyvim.plugins.extras.lang.toml\",
+    \"lazyvim.plugins.extras.lang.yaml\",
+    \"lazyvim.plugins.extras.ui.mini-animate\"
   ],
-  "version": 6
+  \"version\": 6
 }
 """,
             0o644,
@@ -898,16 +913,16 @@ class Bootstrap(object):
         self.write_file_if_changed(
             self.nvim_dir / ".neoconf.json",
             """{
-  "neodev": {
-    "library": {
-      "enabled": true,
-      "plugins": true
+  \"neodev\": {
+    \"library\": {
+      \"enabled\": true,
+      \"plugins\": true
     }
   },
-  "neoconf": {
-    "plugins": {
-      "lua_ls": {
-        "enabled": true
+  \"neoconf\": {
+    \"plugins\": {
+      \"lua_ls\": {
+        \"enabled\": true
       }
     }
   }
@@ -940,42 +955,42 @@ class Bootstrap(object):
         content = """# Managed by setup.py
 auto_sync = false
 update_check = false
-sync_frequency = "1h"
-style = "compact"
+sync_frequency = \"1h\"
+style = \"compact\"
 inline_height = 20
 enter_accept = true
-filter_mode = "global"
+filter_mode = \"global\"
 workspaces = true
 """
         self.write_file_if_changed(self.atuin_config_file, content, 0o644)
 
     def write_omp_theme(self):
         content = """{
-  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
-  "blocks": [
+  \"$schema\": \"https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\",
+  \"blocks\": [
     {
-      "type": "prompt",
-      "alignment": "left",
-      "segments": [
+      \"type\": \"prompt\",
+      \"alignment\": \"left\",
+      \"segments\": [
         {
-          "type": "path",
-          "style": "plain",
-          "foreground": "#B45A56",
-          "properties": {
-            "style": "agnoster"
+          \"type\": \"path\",
+          \"style\": \"plain\",
+          \"foreground\": \"#B45A56\",
+          \"properties\": {
+            \"style\": \"agnoster\"
           },
-          "template": " {{ .Path }} "
+          \"template\": \" {{ .Path }} \"
         },
         {
-          "type": "git",
-          "style": "plain",
-          "foreground": "#B45A56",
-          "template": " <#F5F5F5>git:</>{{ .HEAD }} "
+          \"type\": \"git\",
+          \"style\": \"plain\",
+          \"foreground\": \"#B45A56\",
+          \"template\": \" <#F5F5F5>git:</>{{ .HEAD }} \"
         }
       ]
     }
   ],
-  "version": 2
+  \"version\": 2
 }
 """
         self.write_file_if_changed(self.omp_theme_file, content, 0o644)
@@ -1392,7 +1407,8 @@ fport() {
         if self.dry_run:
             self.dry("would ensure Alacritty config under {0}".format(self.alacritty_dir))
 
-        self.alacritty_dir.mkdir(parents=True, exist_ok=True)
+        if not self.dry_run:
+            self.alacritty_dir.mkdir(parents=True, exist_ok=True)
 
         colors = """[colors.primary]
 background = '#181818'
@@ -1402,10 +1418,10 @@ foreground = '#d8d8d8'
 text = '#181818'
 cursor = '#d8d8d8'
 """
-        managed = """import = ["{colors_file}"]
+        managed = """import = [\"{colors_file}\"]
 
 [shell]
-program = "/bin/zsh"
+program = \"/bin/zsh\"
 
 [window]
 dynamic_padding = false
@@ -1415,7 +1431,7 @@ padding = {{ x = 15, y = 15 }}
 size = 16.0
 
 [env]
-TERM = "xterm-256color"
+TERM = \"xterm-256color\"
 """.format(colors_file=str(self.alacritty_colors_file))
 
         self.write_file_if_changed(self.alacritty_colors_file, colors, 0o644)
@@ -1425,6 +1441,48 @@ TERM = "xterm-256color"
             '# Managed by setup.py\nimport = ["{0}"]\n'.format(self.alacritty_managed_file),
             0o644,
         )
+
+    def write_hammerspoon_config(self):
+        if self.system != "darwin":
+            return
+        if self.install_hammerspoon != "1" or self.alacritty_hotkey_enabled != "1":
+            return
+
+        mods = [m.strip() for m in self.alacritty_hotkey_mods.split(",") if m.strip()]
+        mods_lua = "{" + ", ".join(['"{0}"'.format(m) for m in mods]) + "}"
+        key = self.alacritty_hotkey_key
+
+        content = """-- Managed by setup.py
+
+local alacritty_path = "/Applications/Alacritty.app"
+local mods = {mods}
+local key = "{key}"
+
+if hs.hotkey.systemAssigned(mods, key) then
+  hs.alert.show("Alacritty hotkey is already used by macOS")
+else
+  hs.hotkey.bind(mods, key, function()
+    hs.application.launchOrFocus(alacritty_path)
+  end)
+end
+""".format(mods=mods_lua, key=key)
+
+        self.write_file_if_changed(self.hammerspoon_init_file, content, 0o644)
+
+    def apply_git_config(self):
+        log("[git] applying global git config")
+        cmd = [
+            "git",
+            "config",
+            "--global",
+            'url.ssh://git@ssh.github.com:443/.insteadOf',
+            'git@github.com:',
+        ]
+        if self.dry_run:
+            self.dry("would run: {0}".format(" ".join(cmd)))
+            return
+        run(cmd, env=self.env)
+        info("git github ssh-over-443 mapping applied")
 
     # ---------- health check ----------
 
@@ -1439,6 +1497,12 @@ TERM = "xterm-256color"
         )
         return result.returncode == 0
 
+    def shell_any_command_exists(self, cmds):
+        for cmd in cmds:
+            if self.shell_command_exists(cmd):
+                return True
+        return False
+
     def health_check(self):
         log("[8/8] health check")
 
@@ -1449,55 +1513,61 @@ TERM = "xterm-256color"
         hard_failures = []
 
         checks = [
-            ("zsh", "zsh"),
-            ("git", "git"),
-            ("curl", "curl"),
-            ("jq", "jq"),
-            ("ripgrep", "rg"),
-            ("fd", "fd"),
-            ("fzf", "fzf"),
-            ("tmux", "tmux"),
-            ("neovim", "nvim"),
-            ("python3", Path(self.python_exe).name),
+            ("zsh", ["zsh"]),
+            ("git", ["git"]),
+            ("curl", ["curl"]),
+            ("jq", ["jq"]),
+            ("ripgrep", ["rg"]),
+            ("fd", ["fd", "fdfind"]),
+            ("fzf", ["fzf"]),
+            ("tmux", ["tmux"]),
+            ("neovim", ["nvim"]),
+            ("python3", [Path(self.python_exe).name, "python3"]),
         ]
 
-        for label, cmd in checks:
-            if self.shell_command_exists(cmd):
+        for label, cmds in checks:
+            if self.shell_any_command_exists(cmds):
                 info("found {0} in real zsh shell".format(label))
             else:
                 hard_failures.append(label)
                 err("missing in real zsh shell: {0}".format(label))
 
         soft_checks = [
-            ("bat", "bat"),
-            ("eza", "eza"),
-            ("zoxide", "zoxide"),
-            ("go", "go"),
-            ("node", "node"),
-            ("uv", "uv"),
-            ("atuin", "atuin"),
-            ("lazygit", "lazygit"),
-            ("code", "code"),
+            ("bat", ["bat", "batcat"]),
+            ("eza", ["eza"]),
+            ("zoxide", ["zoxide"]),
+            ("go", ["go"]),
+            ("node", ["node"]),
+            ("uv", ["uv"]),
+            ("atuin", ["atuin"]),
+            ("lazygit", ["lazygit"]),
+            ("code", ["code"]),
         ]
 
-        for label, cmd in soft_checks:
-            if self.shell_command_exists(cmd):
+        for label, cmds in soft_checks:
+            if self.shell_any_command_exists(cmds):
                 info("found {0} in real zsh shell".format(label))
             else:
                 warn("missing in real zsh shell: {0}".format(label))
                 self.soft_failures.append("missing in real zsh shell: {0}".format(label))
 
-        if not (self.home / ".zprofile").exists():
-            hard_failures.append(".zprofile")
-            err("missing ~/.zprofile")
-        else:
-            info("managed ~/.zprofile exists")
+        if self.module_enabled("shell"):
+            if not (self.home / ".zprofile").exists():
+                hard_failures.append(".zprofile")
+                err("missing ~/.zprofile")
+            else:
+                info("managed ~/.zprofile exists")
 
-        if not (self.home / ".zshrc").exists():
-            hard_failures.append(".zshrc")
-            err("missing ~/.zshrc")
-        else:
-            info("managed ~/.zshrc exists")
+            if not (self.home / ".zshrc").exists():
+                hard_failures.append(".zshrc")
+                err("missing ~/.zshrc")
+            else:
+                info("managed ~/.zshrc exists")
+
+        if self.module_enabled("hotkey") and self.system == "darwin" and self.alacritty_hotkey_enabled == "1":
+            if not Path("/Applications/Hammerspoon.app").is_dir():
+                warn("Hammerspoon missing for Alacritty hotkey")
+                self.soft_failures.append("Hammerspoon missing for Alacritty hotkey")
 
         if hard_failures:
             raise RuntimeError("hard failures: {0}".format(", ".join(hard_failures)))
@@ -1506,8 +1576,6 @@ TERM = "xterm-256color"
             warn("non-fatal issues:")
             for item in self.soft_failures:
                 warn("  - {0}".format(item))
-
-    # ---------- main ----------
 
     def cleanup(self):
         shutil.rmtree(str(self.tx_dir), ignore_errors=True)
@@ -1519,25 +1587,44 @@ TERM = "xterm-256color"
         if self.system == "linux":
             log("distro: {0}".format(self.distro_id or "unknown"))
         log("package manager: {0}".format(self.pkg_manager))
+        log("only: {0}".format(self.only))
         if self.dry_run:
             log("mode: dry-run")
 
-        if self.system == "darwin":
+        if self.system == "darwin" and (self.module_enabled("packages") or self.module_enabled("hotkey")):
             self.ensure_xcode_clt()
             self.ensure_brew()
 
-        self.install_core_packages()
-        self.install_optional_system_packages()
-        self.install_python_tools()
-        self.ensure_zinit()
-        self.write_proxy_file()
-        self.write_atuin_config()
-        self.write_omp_theme()
-        self.write_zprofile()
-        self.write_zshrc()
-        self.write_alacritty_files()
-        self.ensure_lazyvim()
-        self.health_check()
+        if self.module_enabled("packages"):
+            self.install_core_packages()
+            self.install_optional_system_packages()
+            self.install_python_tools()
+
+        if self.module_enabled("shell"):
+            self.ensure_zinit()
+            self.write_proxy_file()
+            self.write_atuin_config()
+            self.write_omp_theme()
+            self.write_zprofile()
+            self.write_zshrc()
+            self.write_alacritty_files()
+
+        if self.module_enabled("hotkey"):
+            self.install_hotkey_dependencies()
+            self.write_hammerspoon_config()
+
+        if self.module_enabled("nvim"):
+            self.ensure_lazyvim()
+
+        if self.module_enabled("git"):
+            self.apply_git_config()
+
+        if self.only == "all":
+            self.health_check()
+        elif self.dry_run:
+            self.dry("would skip full health check because --only is not all")
+        else:
+            info("skipped full health check because --only is not all")
 
         log("----------------------------------------")
         if self.dry_run:
@@ -1552,7 +1639,10 @@ TERM = "xterm-256color"
             log("  2. echo $PATH")
             log("  3. code --version")
             log("  4. nvim")
-            log("  5. press Ctrl-R for Atuin")
+            if self.system == "darwin" and self.alacritty_hotkey_enabled == "1":
+                log("  5. open Hammerspoon once, grant Accessibility, then reload config")
+            else:
+                log("  5. press Ctrl-R for Atuin")
 
 
 def parse_args():
@@ -1562,12 +1652,18 @@ def parse_args():
         action="store_true",
         help="show what would change without changing the system",
     )
+    parser.add_argument(
+        "--only",
+        choices=["all", "packages", "shell", "nvim", "hotkey", "git"],
+        default="all",
+        help="run only one module",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    bs = Bootstrap(dry_run=args.dry_run)
+    bs = Bootstrap(dry_run=args.dry_run, only=args.only)
     try:
         bs.main()
     except Exception as ex:
