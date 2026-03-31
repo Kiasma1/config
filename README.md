@@ -6,7 +6,7 @@
 
 - 可以重复执行
 - 把一台 Linux / macOS 机器快速收敛到一个统一、顺手、可维护的开发环境
-- 完全接管你自己的 shell / nvim / alacritty 配置
+- 完全接管你自己的 shell / nvim / ghostty 配置
 - Linux 上可以直接用系统自带的 `python3` 来运行
 - 不依赖第三方 Python 库
 
@@ -101,7 +101,7 @@ nvim
 - `lazygit`
 - `atuin`
 - `oh-my-posh`
-- `alacritty`
+- `ghostty`
 - `yq`
 - `you-get`
 
@@ -125,7 +125,7 @@ python3 -m pip install --user --upgrade ...
 ~/.zshrc
 ~/.config/nvim
 ~/.config/atuin/config.toml
-~/.config/alacritty/alacritty.toml
+~/.config/ghostty/config
 ```
 
 ### 5. 自动备份旧配置
@@ -141,9 +141,9 @@ python3 -m pip install --user --upgrade ...
 - `zinit`
 - `LazyVim starter`
 
-### 7. 配置 Alacritty 全局快捷键（macOS）
+### 7. 配置 Ghostty 全局快捷键（macOS）
 
-通过 **Hammerspoon** 给 Alacritty 配置全局快捷键。
+通过 **Hammerspoon** 给 Ghostty 配置全局快捷键。
 
 默认热键：
 
@@ -153,8 +153,8 @@ ctrl + alt + return
 
 作用：
 
-- Alacritty 没开：启动
-- Alacritty 已开：切到前台
+- Ghostty 没开：启动
+- Ghostty 已开：切到前台
 
 ### 8. 配置 GitHub SSH over 443
 
@@ -203,13 +203,13 @@ python3 setup.py --only git
 - `zinit`
 - `Atuin`
 - `oh-my-posh`
-- Alacritty 配置
+- Ghostty 配置
 
 #### `--only nvim`
 只处理 Neovim / LazyVim。
 
 #### `--only hotkey`
-只处理 Alacritty 全局快捷键相关内容：
+只处理 Ghostty 全局快捷键相关内容：
 
 - Hammerspoon 配置
 - 热键配置写入

@@ -290,14 +290,8 @@ class Bootstrap(object):
             "zypper": "atuin",
             "apk": "atuin",
         },
-        "alacritty": {
-            "brew_cask": "alacritty",
-            "apt": "alacritty",
-            "dnf": "alacritty",
-            "yum": "alacritty",
-            "pacman": "alacritty",
-            "zypper": "alacritty",
-            "apk": "alacritty",
+        "ghostty": {
+            "brew_cask": "ghostty",
         },
         "rectangle": {
             "brew_cask": "rectangle",
@@ -374,6 +368,7 @@ class Bootstrap(object):
 
         self.modified_paths = []
         self.soft_failures = []
+        self.git_config_backups = {}
 
         self.config_home = Path(env.get("XDG_CONFIG_HOME", str(self.home / ".config")))
         self.data_home = Path(env.get("XDG_DATA_HOME", str(self.home / ".local" / "share")))
@@ -389,13 +384,12 @@ class Bootstrap(object):
         self.atuin_dir = self.config_home / "atuin"
         self.atuin_config_file = self.atuin_dir / "config.toml"
 
-        self.alacritty_dir = self.config_home / "alacritty"
-        self.alacritty_main_file = self.alacritty_dir / "alacritty.toml"
-        self.alacritty_managed_file = self.alacritty_dir / "bootstrap-managed.toml"
-        self.alacritty_colors_file = self.alacritty_dir / "bootstrap-colors.toml"
+        self.ghostty_dir = self.config_home / "ghostty"
+        self.ghostty_config_file = self.ghostty_dir / "config"
 
         self.hammerspoon_dir = self.home / ".hammerspoon"
         self.hammerspoon_init_file = self.hammerspoon_dir / "init.lua"
+        self.hammerspoon_managed_file = self.hammerspoon_dir / "bootstrap-managed.lua"
 
         self.nvim_dir = self.config_home / "nvim"
         self.zinit_home = self.data_home / "zinit" / "zinit.git"
@@ -405,13 +399,19 @@ class Bootstrap(object):
         self.all_proxy = env.get("BOOTSTRAP_ALL_PROXY", "socks5://127.0.0.1:7897")
 
         self.install_vscode = env.get("BOOTSTRAP_INSTALL_VSCODE", "1")
-        self.install_alacritty = env.get("BOOTSTRAP_INSTALL_ALACRITTY", "1")
+        self.install_ghostty = env.get("BOOTSTRAP_INSTALL_GHOSTTY", env.get("BOOTSTRAP_INSTALL_ALACRITTY", "1"))
         self.install_rectangle = env.get("BOOTSTRAP_INSTALL_RECTANGLE", "1")
         self.install_stats = env.get("BOOTSTRAP_INSTALL_STATS", "0")
         self.install_hammerspoon = env.get("BOOTSTRAP_INSTALL_HAMMERSPOON", "1")
-        self.alacritty_hotkey_enabled = env.get("BOOTSTRAP_ALACRITTY_HOTKEY", "1")
-        self.alacritty_hotkey_mods = env.get("BOOTSTRAP_ALACRITTY_HOTKEY_MODS", "ctrl,alt")
-        self.alacritty_hotkey_key = env.get("BOOTSTRAP_ALACRITTY_HOTKEY_KEY", "return")
+        self.ghostty_hotkey_enabled = env.get("BOOTSTRAP_GHOSTTY_HOTKEY", env.get("BOOTSTRAP_ALACRITTY_HOTKEY", "1"))
+        self.ghostty_hotkey_mods = env.get(
+            "BOOTSTRAP_GHOSTTY_HOTKEY_MODS",
+            env.get("BOOTSTRAP_ALACRITTY_HOTKEY_MODS", "ctrl,alt"),
+        )
+        self.ghostty_hotkey_key = env.get(
+            "BOOTSTRAP_GHOSTTY_HOTKEY_KEY",
+            env.get("BOOTSTRAP_ALACRITTY_HOTKEY_KEY", "return"),
+        )
 
         if not self.dry_run:
             self.backup_root.mkdir(parents=True, exist_ok=True)
@@ -530,9 +530,19 @@ class Bootstrap(object):
             except Exception as ex:
                 warn("rollback failed for {0}: {1}".format(path_obj, ex))
 
+        for key, values in self.git_config_backups.items():
+            try:
+                run(["git", "config", "--global", "--unset-all", key], check=False, env=self.env)
+                if values is None:
+                    continue
+                for value in values:
+                    run(["git", "config", "--global", "--add", key, value], env=self.env)
+            except Exception as ex:
+                warn("git config rollback failed for {0}: {1}".format(key, ex))
+
     def write_file_if_changed(self, dest, content, mode=None):
         current = None
-        if dest.exists():
+        if dest.exists() or dest.is_symlink():
             try:
                 current = dest.read_text(encoding="utf-8")
             except Exception:
@@ -543,17 +553,28 @@ class Bootstrap(object):
             return
 
         if self.dry_run:
-            action = "would overwrite" if dest.exists() else "would create"
+            action = "would overwrite" if (dest.exists() or dest.is_symlink()) else "would create"
             self.dry("{0} {1}".format(action, dest))
             return
 
         self.record_backup(dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        with open(str(dest), "w", encoding="utf-8", newline="\n") as f:
-            f.write(content)
+        fd, tmp_name = tempfile.mkstemp(prefix=dest.name + ".", dir=str(dest.parent))
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+                f.write(content)
 
-        if mode is not None:
-            dest.chmod(mode)
+            if mode is not None:
+                tmp_path.chmod(mode)
+
+            os.replace(str(tmp_path), str(dest))
+        except Exception:
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+            raise
 
     def remove_and_replace_dir(self, dest, source):
         if self.dry_run:
@@ -677,7 +698,7 @@ class Bootstrap(object):
         elif pm == "yum":
             cmd = self.sudo_prefix() + ["yum", "makecache"]
         elif pm == "pacman":
-            cmd = self.sudo_prefix() + ["pacman", "-Sy", "--noconfirm"]
+            cmd = []
         elif pm == "zypper":
             cmd = self.sudo_prefix() + ["zypper", "refresh"]
         elif pm == "apk":
@@ -793,10 +814,10 @@ class Bootstrap(object):
         if self.system != "darwin":
             return
 
-        if self.install_alacritty == "1":
-            self.install_optional_app_cask("alacritty", Path("/Applications/Alacritty.app"))
+        if self.install_ghostty == "1":
+            self.install_optional_app_cask("ghostty", Path("/Applications/Ghostty.app"))
 
-        if self.install_hammerspoon == "1" and self.alacritty_hotkey_enabled == "1":
+        if self.install_hammerspoon == "1" and self.ghostty_hotkey_enabled == "1":
             self.install_optional_app_cask("hammerspoon", Path("/Applications/Hammerspoon.app"))
 
     def install_optional_app_cask(self, key, app_path):
@@ -862,6 +883,16 @@ class Bootstrap(object):
         fallback = [self.python_exe, "-m", "pip", "install", "--user", "--upgrade", "--break-system-packages"] + packages
         result2 = run(fallback, check=False, capture=True, env=self.env)
         return result2.returncode == 0
+
+    def record_git_config_backup(self, key):
+        if key in self.git_config_backups:
+            return
+
+        result = run(["git", "config", "--global", "--get-all", key], check=False, capture=True, env=self.env)
+        if result.returncode == 0:
+            self.git_config_backups[key] = result.stdout.splitlines()
+        else:
+            self.git_config_backups[key] = None
 
     def install_python_tools(self):
         log("[5/8] installing python user tools")
@@ -1400,87 +1431,109 @@ fport() {
         )
         self.write_file_if_changed(self.home / ".zshrc", content, 0o644)
 
-    def write_alacritty_files(self):
-        if self.install_alacritty != "1":
+    def write_ghostty_files(self):
+        if self.install_ghostty != "1":
             return
 
         if self.dry_run:
-            self.dry("would ensure Alacritty config under {0}".format(self.alacritty_dir))
+            self.dry("would ensure Ghostty config under {0}".format(self.ghostty_dir))
 
         if not self.dry_run:
-            self.alacritty_dir.mkdir(parents=True, exist_ok=True)
+            self.ghostty_dir.mkdir(parents=True, exist_ok=True)
 
-        colors = """[colors.primary]
-background = '#181818'
-foreground = '#d8d8d8'
-
-[colors.cursor]
-text = '#181818'
-cursor = '#d8d8d8'
+        content = """# Managed by setup.py
+font-size = 16
+background = #181818
+foreground = #d8d8d8
+window-padding-x = 15
+window-padding-y = 15
+shell-integration = detect
 """
-        managed = """import = [\"{colors_file}\"]
-
-[shell]
-program = \"/bin/zsh\"
-
-[window]
-dynamic_padding = false
-padding = {{ x = 15, y = 15 }}
-
-[font]
-size = 16.0
-
-[env]
-TERM = \"xterm-256color\"
-""".format(colors_file=str(self.alacritty_colors_file))
-
-        self.write_file_if_changed(self.alacritty_colors_file, colors, 0o644)
-        self.write_file_if_changed(self.alacritty_managed_file, managed, 0o644)
-        self.write_file_if_changed(
-            self.alacritty_main_file,
-            '# Managed by setup.py\nimport = ["{0}"]\n'.format(self.alacritty_managed_file),
-            0o644,
-        )
+        self.write_file_if_changed(self.ghostty_config_file, content, 0o644)
 
     def write_hammerspoon_config(self):
         if self.system != "darwin":
             return
-        if self.install_hammerspoon != "1" or self.alacritty_hotkey_enabled != "1":
+        if self.install_hammerspoon != "1" or self.ghostty_hotkey_enabled != "1":
             return
 
-        mods = [m.strip() for m in self.alacritty_hotkey_mods.split(",") if m.strip()]
+        mods = [m.strip() for m in self.ghostty_hotkey_mods.split(",") if m.strip()]
         mods_lua = "{" + ", ".join(['"{0}"'.format(m) for m in mods]) + "}"
-        key = self.alacritty_hotkey_key
+        key = self.ghostty_hotkey_key
 
-        content = """-- Managed by setup.py
+        managed_content = """-- Managed by setup.py
 
-local alacritty_path = "/Applications/Alacritty.app"
+local ghostty_path = "/Applications/Ghostty.app"
 local mods = {mods}
 local key = "{key}"
 
 if hs.hotkey.systemAssigned(mods, key) then
-  hs.alert.show("Alacritty hotkey is already used by macOS")
+  hs.alert.show("Ghostty hotkey is already used by macOS")
 else
   hs.hotkey.bind(mods, key, function()
-    hs.application.launchOrFocus(alacritty_path)
+    hs.application.launchOrFocus(ghostty_path)
   end)
 end
 """.format(mods=mods_lua, key=key)
 
-        self.write_file_if_changed(self.hammerspoon_init_file, content, 0o644)
+        self.write_file_if_changed(self.hammerspoon_managed_file, managed_content, 0o644)
+
+        start_marker = "-- bootstrap-managed:start"
+        end_marker = "-- bootstrap-managed:end"
+        managed_path = str(self.hammerspoon_managed_file).replace("\\", "\\\\").replace('"', '\\"')
+        block = """{start_marker}
+local bootstrap_managed_ok, bootstrap_managed_err = pcall(function()
+  dofile("{managed_path}")
+end)
+if not bootstrap_managed_ok then
+  hs.alert.show("bootstrap-managed.lua failed to load")
+  print(bootstrap_managed_err)
+end
+{end_marker}
+""".format(
+            start_marker=start_marker,
+            managed_path=managed_path,
+            end_marker=end_marker,
+        )
+
+        current = ""
+        if self.hammerspoon_init_file.exists() or self.hammerspoon_init_file.is_symlink():
+            try:
+                current = self.hammerspoon_init_file.read_text(encoding="utf-8")
+            except Exception:
+                current = ""
+
+        if start_marker in current and end_marker in current:
+            before, _, rest = current.partition(start_marker)
+            _, _, after = rest.partition(end_marker)
+            if after.startswith("\n"):
+                after = after[1:]
+            init_content = before.rstrip() + "\n\n" + block.rstrip()
+            if after.strip():
+                init_content += "\n\n" + after.lstrip()
+            else:
+                init_content += "\n"
+        elif current.strip():
+            init_content = current.rstrip() + "\n\n" + block
+        else:
+            init_content = block
+
+        self.write_file_if_changed(self.hammerspoon_init_file, init_content, 0o644)
 
     def apply_git_config(self):
         log("[git] applying global git config")
+        key = "url.ssh://git@ssh.github.com:443/.insteadOf"
         cmd = [
             "git",
             "config",
             "--global",
-            'url.ssh://git@ssh.github.com:443/.insteadOf',
+            key,
             'git@github.com:',
         ]
         if self.dry_run:
             self.dry("would run: {0}".format(" ".join(cmd)))
             return
+        self.record_git_config_backup(key)
         run(cmd, env=self.env)
         info("git github ssh-over-443 mapping applied")
 
@@ -1564,10 +1617,10 @@ end
             else:
                 info("managed ~/.zshrc exists")
 
-        if self.module_enabled("hotkey") and self.system == "darwin" and self.alacritty_hotkey_enabled == "1":
+        if self.module_enabled("hotkey") and self.system == "darwin" and self.ghostty_hotkey_enabled == "1":
             if not Path("/Applications/Hammerspoon.app").is_dir():
-                warn("Hammerspoon missing for Alacritty hotkey")
-                self.soft_failures.append("Hammerspoon missing for Alacritty hotkey")
+                warn("Hammerspoon missing for Ghostty hotkey")
+                self.soft_failures.append("Hammerspoon missing for Ghostty hotkey")
 
         if hard_failures:
             raise RuntimeError("hard failures: {0}".format(", ".join(hard_failures)))
@@ -1607,7 +1660,7 @@ end
             self.write_omp_theme()
             self.write_zprofile()
             self.write_zshrc()
-            self.write_alacritty_files()
+            self.write_ghostty_files()
 
         if self.module_enabled("hotkey"):
             self.install_hotkey_dependencies()
@@ -1616,15 +1669,15 @@ end
         if self.module_enabled("nvim"):
             self.ensure_lazyvim()
 
-        if self.module_enabled("git"):
-            self.apply_git_config()
-
         if self.only == "all":
             self.health_check()
         elif self.dry_run:
             self.dry("would skip full health check because --only is not all")
         else:
             info("skipped full health check because --only is not all")
+
+        if self.module_enabled("git"):
+            self.apply_git_config()
 
         log("----------------------------------------")
         if self.dry_run:
@@ -1639,7 +1692,7 @@ end
             log("  2. echo $PATH")
             log("  3. code --version")
             log("  4. nvim")
-            if self.system == "darwin" and self.alacritty_hotkey_enabled == "1":
+            if self.system == "darwin" and self.ghostty_hotkey_enabled == "1":
                 log("  5. open Hammerspoon once, grant Accessibility, then reload config")
             else:
                 log("  5. press Ctrl-R for Atuin")
