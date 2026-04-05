@@ -88,11 +88,6 @@ nvim
 - `tmux`
 - `neovim`
 - `htop`
-
-### 2. 安装一批常用工具
-
-尽量安装：
-
 - `node`
 - `go`
 - `bat`
@@ -101,11 +96,10 @@ nvim
 - `lazygit`
 - `atuin`
 - `oh-my-posh`
-- `ghostty`
 - `yq`
 - `you-get`
 
-### 3. 安装 Python 用户级工具
+### 2. 安装 Python 用户级工具
 
 通过：
 
@@ -115,8 +109,20 @@ python3 -m pip install --user --upgrade ...
 
 安装：
 
-- `pipx`
 - `uv`
+
+### 3. macOS 附加应用
+
+默认会按开关安装这些应用：
+
+- `ghostty`
+- `Visual Studio Code`
+- `Rectangle`
+- `Hammerspoon`
+
+默认关闭：
+
+- `Stats`
 
 ### 4. 完全接管这些配置
 
@@ -140,6 +146,12 @@ python3 -m pip install --user --upgrade ...
 
 - `zinit`
 - `LazyVim starter`
+
+`oh-my-posh` 主题文件放在仓库里：
+
+```text
+assets/oh-my-posh/lambda.omp.json
+```
 
 ### 7. 配置 Ghostty 全局快捷键（macOS）
 
@@ -192,7 +204,7 @@ python3 setup.py --only git
 只处理安装包相关的事情：
 
 - 核心包
-- 可选包
+- macOS 附加应用
 - Python 用户级工具
 
 #### `--only shell`
@@ -774,6 +786,9 @@ go mod tidy
 | `reloadz` | `exec zsh -l` | 同上 |
 | `md` | `mkdir -p` | 递归创建目录 |
 | `py` | `python3` | 更短的 Python 入口 |
+| `..` | `cd ..` | 回到上一级目录 |
+| `...` | `cd ../..` | 回到上两级目录 |
+| `....` | `cd ../../..` | 回到上三级目录 |
 
 ---
 
@@ -787,6 +802,7 @@ go mod tidy
 | `llm` | `eza -lbGd --git --sort=modified` | 按修改时间看目录 |
 | `lt` | `eza --tree --level=2` | 树状查看目录 |
 | `lta` | `eza --tree --all --level=2` | 树状查看所有文件 |
+| `l1` | `eza -1` | 每行只显示一个条目 |
 
 ---
 
@@ -837,7 +853,24 @@ go mod tidy
 | `gpf` | `git push --force-with-lease` | 安全一点的强推 |
 | `gfetch` | `git fetch --all --prune` | 刷新远端分支 |
 | `gundo` | `git reset --soft HEAD~1` | 撤回上一次提交但保留改动 |
+| `gst` | `git stash` | 暂存当前工作区改动 |
+| `gsta` | `git stash apply` | 应用某个 stash |
+| `gsp` | `git stash pop` | 应用并删除最近一个 stash |
 | `lg` | `lazygit` | 打开 lazygit |
+
+---
+
+### tmux
+
+| 你输入这个命令 | 实际执行的是 | 说明 |
+|---|---|---|
+| `tm` | `tmux` | tmux 主命令 |
+| `tml` | `tmux ls` | 列出 session |
+| `tmn` | `tmux new -s` | 新建一个命名 session |
+| `tmc` | `tmux new-session -A -s` | 不存在就创建，存在就连接 |
+| `tma` | `tmux attach -t` | 连接到指定 session |
+| `tmd` | `tmux detach` | 从当前 tmux session 脱离 |
+| `tmk` | `tmux kill-session -t` | 关闭指定 session |
 
 ---
 

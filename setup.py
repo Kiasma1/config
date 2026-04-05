@@ -361,6 +361,7 @@ class Bootstrap(object):
         self.pkg_manager = self.detect_package_manager()
         self.distro_id = self.detect_distro_id()
         self.repo_updated = False
+        self.repo_root = Path(__file__).resolve().parent
 
         self.tx_dir = Path(tempfile.mkdtemp(prefix="bootstrap-tx-"))
         ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -380,6 +381,7 @@ class Bootstrap(object):
 
         self.omp_dir = self.managed_root / "oh-my-posh"
         self.omp_theme_file = self.omp_dir / "lambda.omp.json"
+        self.omp_theme_source_file = self.repo_root / "assets" / "oh-my-posh" / "lambda.omp.json"
 
         self.atuin_dir = self.config_home / "atuin"
         self.atuin_config_file = self.atuin_dir / "config.toml"
@@ -773,18 +775,6 @@ class Bootstrap(object):
             "tmux",
             "neovim",
             "htop",
-        ]
-        pkgs = []
-        for key in keys:
-            pkg = self.resolve_package(key)
-            if pkg:
-                pkgs.append(pkg)
-        self.install_system_packages(pkgs, soft_fail=False, cask=False)
-
-    def install_optional_system_packages(self):
-        log("[4/8] installing optional packages")
-
-        names = [
             "node",
             "go",
             "bat",
@@ -796,10 +786,15 @@ class Bootstrap(object):
             "yq",
             "you-get",
         ]
-        for key in names:
+        pkgs = []
+        for key in keys:
             pkg = self.resolve_package(key)
             if pkg:
-                self.install_system_packages([pkg], soft_fail=True, cask=False)
+                pkgs.append(pkg)
+        self.install_system_packages(pkgs, soft_fail=False, cask=False)
+
+    def install_optional_system_packages(self):
+        log("[4/8] installing optional desktop apps")
 
         if self.system == "darwin":
             if self.install_vscode == "1":
@@ -901,7 +896,7 @@ class Bootstrap(object):
             self.soft_failures.append("pip not available, skipping python user tools")
             return
 
-        for pkg in ("pipx", "uv"):
+        for pkg in ("uv",):
             ok = self.pip_install_user([pkg])
             if ok:
                 info("python user tool installed: {0}".format(pkg))
@@ -996,34 +991,7 @@ workspaces = true
         self.write_file_if_changed(self.atuin_config_file, content, 0o644)
 
     def write_omp_theme(self):
-        content = """{
-  \"$schema\": \"https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\",
-  \"blocks\": [
-    {
-      \"type\": \"prompt\",
-      \"alignment\": \"left\",
-      \"segments\": [
-        {
-          \"type\": \"path\",
-          \"style\": \"plain\",
-          \"foreground\": \"#B45A56\",
-          \"properties\": {
-            \"style\": \"agnoster\"
-          },
-          \"template\": \" {{ .Path }} \"
-        },
-        {
-          \"type\": \"git\",
-          \"style\": \"plain\",
-          \"foreground\": \"#B45A56\",
-          \"template\": \" <#F5F5F5>git:</>{{ .HEAD }} \"
-        }
-      ]
-    }
-  ],
-  \"version\": 2
-}
-"""
+        content = self.omp_theme_source_file.read_text(encoding="utf-8")
         self.write_file_if_changed(self.omp_theme_file, content, 0o644)
 
     def write_zprofile(self):
@@ -1171,6 +1139,17 @@ alias reloadz='exec zsh -l'
 alias md='mkdir -p'
 alias py='python3'
 alias lg='lazygit'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+alias tm='tmux'
+alias tma='tmux attach -t'
+alias tml='tmux ls'
+alias tmn='tmux new -s'
+alias tmc='tmux new-session -A -s'
+alias tmd='tmux detach'
+alias tmk='tmux kill-session -t'
 
 if command -v eza >/dev/null 2>&1; then
   alias ls='eza'
@@ -1228,6 +1207,9 @@ alias gpf='git push --force-with-lease'
 alias gcl='git clone'
 alias gfetch='git fetch --all --prune'
 alias gundo='git reset --soft HEAD~1'
+alias gst='git stash'
+alias gsta='git stash apply'
+alias gsp='git stash pop'
 alias groot='cd "$(git rev-parse --show-toplevel 2>/dev/null)"'
 
 alias u='uv'
