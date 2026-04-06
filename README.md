@@ -220,6 +220,12 @@ python3 setup.py --only git
 #### `--only nvim`
 只处理 Neovim / LazyVim。
 
+默认会额外生成一个 LazyVim 插件文件，提供插入模式下：
+
+```text
+jj -> <Esc>
+```
+
 #### `--only hotkey`
 只处理 Ghostty 全局快捷键相关内容：
 
