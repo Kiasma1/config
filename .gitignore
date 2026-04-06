@@ -17,6 +17,11 @@ Icon
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
 
+### Local tool artifacts
+.nvimlog
+.omx/
+repomix-output.xml
+
 ### Python
 # Byte-compiled files
 __pycache__/
