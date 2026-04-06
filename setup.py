@@ -958,6 +958,20 @@ class Bootstrap(object):
         )
 
         self.write_file_if_changed(
+            self.nvim_dir / "lua" / "plugins" / "jj-escape.lua",
+            """return {
+  {
+    "LazyVim/LazyVim",
+    keys = {
+      { "jj", "<Esc>", mode = "i", desc = "Exit insert mode" },
+    },
+  },
+}
+""",
+            0o644,
+        )
+
+        self.write_file_if_changed(
             self.nvim_dir / ".bootstrap-managed",
             "managed_by=setup.py\nmanaged_at={0}\n".format(now_text),
             0o644,
