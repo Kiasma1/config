@@ -72,5 +72,38 @@ class InstallPythonToolsTests(unittest.TestCase):
                 self.assertNotIn(["pipx"], installed)
 
 
+class InstallOptionalSystemPackagesTests(unittest.TestCase):
+    def test_install_optional_system_packages_on_macos_respects_switches(self):
+        with tempfile.TemporaryDirectory() as home_dir:
+            env = {
+                "HOME": home_dir,
+                "BOOTSTRAP_INSTALL_VSCODE": "1",
+                "BOOTSTRAP_INSTALL_RECTANGLE": "0",
+                "BOOTSTRAP_INSTALL_STATS": "1",
+            }
+            with mock.patch.dict(os.environ, env, clear=False):
+                bootstrap = setup.Bootstrap(dry_run=False, only="packages")
+                bootstrap.system = "darwin"
+                installed = []
+                font_calls = []
+
+                def fake_install_optional_app_cask(key, app_path):
+                    installed.append((key, Path(app_path)))
+
+                bootstrap.install_optional_app_cask = fake_install_optional_app_cask
+                bootstrap.ensure_jetbrains_nerd_font = lambda: font_calls.append("font")
+
+                bootstrap.install_optional_system_packages()
+
+                self.assertEqual(
+                    installed,
+                    [
+                        ("vscode", Path("/Applications/Visual Studio Code.app")),
+                        ("stats", Path("/Applications/Stats.app")),
+                    ],
+                )
+                self.assertEqual(font_calls, ["font"])
+
+
 if __name__ == "__main__":
     unittest.main()
