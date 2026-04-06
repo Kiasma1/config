@@ -772,6 +772,19 @@ go mod tidy
 - **你输入这个命令**
 - **实际执行的是**
 
+如果你只是想快速找一类命令，可以直接看这里：
+
+| 你现在想做什么 | 看哪一段 |
+|---|---|
+| 改 shell / 打开编辑器 / 快速回目录 | [编辑器 / shell](#编辑器--shell) |
+| 看文件、列目录、树状浏览 | [文件列表 / 目录浏览](#文件列表--目录浏览) |
+| 看端口、看进程、看文件内容 | [查看文件 / 系统状态](#查看文件--系统状态) |
+| 查 JSON / YAML / 历史命令 | [JSON / YAML / 历史命令](#json--yaml--历史命令) |
+| 处理 Git 日常操作 | [Git](#git) |
+| 管理 tmux session | [tmux](#tmux) |
+| 跑 Python / uv | [Python / uv](#python--uv) |
+| 跑 Go 项目 | [Go](#go) |
+
 ---
 
 ### 编辑器 / shell
@@ -959,33 +972,48 @@ got
 
 ### `brew` 找不到
 
-先执行：
+**现象**
+
+- `brew --version` 跑不起来
+- 明明装了 Homebrew，但当前 shell 里找不到
+
+**先查**
 
 ```bash
 exec zsh -l
-```
-
-再试：
-
-```bash
 command -v brew
 brew --version
 ```
 
+**说明**
+
+- 这通常是 login shell 还没重进，`brew shellenv` 还没重新加载
+
 ### `vim` 变成 `nvim`，但 `nvim` 找不到
 
-说明：
+**现象**
 
 - `.zshrc` 生效了
 - 但 `nvim` 没装好，或者 PATH 不对
 
-先查：
+**先查**
 
 ```bash
 command -v nvim
 ```
 
+**说明**
+
+- `vim` 被 alias 到了 `nvim`
+- 如果 `nvim` 本体没装好，就会出现这个现象
+
 ### Linux 上 `fd` 不存在
+
+**现象**
+
+- 你输入 `fd`，系统提示命令不存在
+
+**说明**
 
 某些系统里命令名是：
 
@@ -997,6 +1025,12 @@ fdfind
 
 ### Linux 上 `bat` 不存在
 
+**现象**
+
+- 你输入 `bat`，系统提示命令不存在
+
+**说明**
+
 某些系统里命令名是：
 
 ```bash
@@ -1007,7 +1041,7 @@ batcat
 
 ### 我不想直接改太多，只想看会做什么
 
-用：
+**直接用这个命令**
 
 ```bash
 python3 setup.py --dry-run
