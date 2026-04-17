@@ -6,7 +6,7 @@
 
 - 可以重复执行
 - 把一台 Linux / macOS 机器快速收敛到一个统一、顺手、可维护的开发环境
-- 完全接管你自己的 shell / nvim / ghostty 配置
+- 完全接管你自己的 shell / helix / ghostty 配置
 - Linux 上可以直接用系统自带的 `python3` 来运行
 - 不依赖第三方 Python 库
 
@@ -19,9 +19,10 @@
 | 我只想先试跑，不想马上改系统 | [快速开始](#快速开始) | `python3 setup.py --dry-run` |
 | 我想知道它到底会改什么 | [它会做什么](#它会做什么) | 安装项、接管配置、备份路径 |
 | 我只想改某一部分 | [运行模式](#运行模式) | `python3 setup.py --only shell` |
+| 我想知道每个工具最常怎么用 | [CLI 工具速查](#cli-工具速查) | `rg` / `fd` / `hx` / `tmux` |
 | 我想学会最有用的命令 | [最值得先记住的一批命令](#最值得先记住的一批命令) | `ff` / `vf` / `cdf` / `rgf` |
 | 我只想查 alias | [常用 alias 说明](#常用-alias-说明) | `gs` / `tmc` / `uvinit` |
-| 我已经跑过 setup，现在想排错 | [常见问题](#常见问题) | `brew` / `nvim` / `fd` / `bat` |
+| 我已经跑过 setup，现在想排错 | [常见问题](#常见问题) | `brew` / `hx` / `fd` / `bat` |
 
 ### 目录
 
@@ -30,12 +31,13 @@
 3. [快速开始](#快速开始)
 4. [它会做什么](#它会做什么)
 5. [运行模式](#运行模式)
-6. [先理解这几个基础工具](#先理解这几个基础工具)
-7. [最值得先记住的一批命令](#最值得先记住的一批命令)
-8. [常用 alias 说明](#常用-alias-说明)
-9. [新手建议：先这样学](#新手建议先这样学)
-10. [常见问题](#常见问题)
-11. [一句话总结](#一句话总结)
+6. [CLI 工具速查](#cli-工具速查)
+7. [先理解这几个基础工具](#先理解这几个基础工具)
+8. [最值得先记住的一批命令](#最值得先记住的一批命令)
+9. [常用 alias 说明](#常用-alias-说明)
+10. [新手建议：先这样学](#新手建议先这样学)
+11. [常见问题](#常见问题)
+12. [一句话总结](#一句话总结)
 
 ---
 
@@ -49,14 +51,14 @@
 
 - 新机器开荒很麻烦
 - 老机器越用越乱
-- shell、nvim、终端、常用 CLI 工具不统一
+- shell、helix、终端、常用 CLI 工具不统一
 - 想反复执行 setup，但不想每次都手工修环境
 - 不想继续维护越来越难看的 bash 大脚本
 
 ### 它更适合什么人
 
 - 想把新机器快速整理成统一环境的人
-- 接受“脚本直接接管我的 shell / nvim 配置”的人
+- 接受“脚本直接接管我的 shell / helix 配置”的人
 - 希望以后继续反复执行同一份 setup 的人
 
 ### 它不太适合什么人
@@ -102,7 +104,7 @@
 | 全量执行 | `python3 setup.py` |
 | 只装软件 | `python3 setup.py --only packages` |
 | 只更新 shell 环境 | `python3 setup.py --only shell` |
-| 只更新 Neovim | `python3 setup.py --only nvim` |
+| 只更新 Helix | `python3 setup.py --only helix` |
 | 执行后重新进入 login shell | `exec zsh -l` |
 
 ### 先预演（不真正修改系统）
@@ -122,7 +124,7 @@ python3 setup.py
 ```bash
 exec zsh -l
 code --version
-nvim
+hx
 ```
 
 ---
@@ -146,16 +148,15 @@ nvim
 - `fd` / `fdfind`
 - `fzf`
 - `tmux`
-- `neovim`
+- `helix`
 - `htop`
 - `node`
 - `go`
 - `bat`
 - `eza`
 - `zoxide`
-- `lazygit`
 - `atuin`
-- `oh-my-posh`
+- `starship`
 - `yq`
 - `you-get`
 
@@ -189,7 +190,7 @@ python3 -m pip install --user --upgrade ...
 ```text
 ~/.zprofile
 ~/.zshrc
-~/.config/nvim
+~/.config/helix/config.toml
 ~/.config/atuin/config.toml
 ~/.config/ghostty/config
 ```
@@ -205,12 +206,11 @@ python3 -m pip install --user --upgrade ...
 ### 6. 刷新这些仓库配置
 
 - `zinit`
-- `LazyVim starter`
 
-`oh-my-posh` 主题文件放在仓库里：
+`starship` 提示符配置文件放在仓库里：
 
 ```text
-assets/oh-my-posh/lambda.omp.json
+assets/starship/starship.toml
 ```
 
 ### 7. 配置 Ghostty 全局快捷键（macOS）
@@ -258,7 +258,7 @@ python3 setup.py
 ```bash
 python3 setup.py --only packages
 python3 setup.py --only shell
-python3 setup.py --only nvim
+python3 setup.py --only helix
 python3 setup.py --only hotkey
 python3 setup.py --only git
 ```
@@ -269,7 +269,7 @@ python3 setup.py --only git
 
 - `--only packages`：装软件
 - `--only shell`：改 shell / 终端环境
-- `--only nvim`：改 Neovim / LazyVim
+- `--only helix`：改 Helix
 
 #### `--only packages`
 只处理安装包相关的事情：
@@ -285,13 +285,13 @@ python3 setup.py --only git
 - `~/.zshrc`
 - `zinit`
 - `Atuin`
-- `oh-my-posh`
+- `starship`
 - Ghostty 配置
 
-#### `--only nvim`
-只处理 Neovim / LazyVim。
+#### `--only helix`
+只处理 Helix 配置。
 
-默认会额外生成一个 LazyVim 插件文件，提供插入模式下：
+默认会写入一份 Helix 配置，包含插入模式下：
 
 ```text
 jj -> <Esc>
@@ -308,459 +308,114 @@ jj -> <Esc>
 
 ---
 
+## CLI 工具速查
+
+如果你只想知道：
+
+> 这些工具各自最常用的一条命令是什么、它们大概是干什么的
+
+直接看这张表就够了。
+
+| 工具 | 最推荐命令 | 这工具是干什么的 |
+|---|---|---|
+| `zsh` | `exec zsh -l` | 重新进入 shell，加载最新配置 |
+| `git` | `git status -sb` | 看当前仓库状态和分支 |
+| `curl` | `curl https://example.com` | 发 HTTP 请求，常用来测接口 |
+| `wget` | `wget https://example.com/file.zip` | 直接下载文件 |
+| `jq` | `jq . package.json` | 查看和处理 JSON |
+| `rg` | `rg "TODO"` | 全项目快速搜文本 |
+| `fd` | `fd config` | 快速找文件和目录 |
+| `fzf` | `history \| fzf` | 从大量候选里模糊筛选 |
+| `tmux` | `tmux new -s work` | 创建可复用的终端会话 |
+| `hx` | `hx README.md` | 打开文件编辑；你现在的主编辑器 |
+| `htop` | `htop` | 查看进程和资源占用 |
+| `node` | `node -v` | Node.js 运行时入口 |
+| `go` | `go test ./...` | 跑整个 Go 项目的测试 |
+| `bat` | `bat README.md` | 更好看的文件查看器 |
+| `eza` | `eza -la` | 更好看的目录列表 |
+| `zoxide` | `z project` | 快速跳转常用目录 |
+| `atuin` | `atuin search` | 搜索历史命令 |
+| `starship` | `starship explain` | 查看 prompt 是怎么生成的 |
+| `yq` | `yq . config.yaml` | 查看和处理 YAML |
+| `you-get` | `you-get -i <URL>` | 查看媒体链接可下载信息 |
+| `uv` | `uv run python main.py` | 更现代地运行 Python 项目或脚本 |
+
+### 如果你只想先记住 8 个
+
+1. `rg "关键词"`
+2. `fd 文件名`
+3. `hx 文件名`
+4. `git status -sb`
+5. `tmux new -s work`
+6. `z 项目名`
+7. `jq . file.json`
+8. `atuin search`
+
+---
+
 ## 先理解这几个基础工具
 
-后面很多命令都基于这些工具。
+后面很多命令都建立在这 5 个工具上：
 
-如果你不想一口气读完整个 README，可以这样跳着看：
+| 工具 | 一句话理解 | 最常见用途 |
+|---|---|---|
+| `fzf` | 终端里的模糊选择器 | 从一堆结果里选一个 |
+| `fd` | 更顺手的 `find` | 找文件、找目录 |
+| `rg` | 更适合代码搜索的 `grep` | 搜关键字、搜函数、搜配置 |
+| `atuin` | 强化版命令历史 | 把以前跑过的命令找回来 |
+| `uv` | 现代 Python 工具链 | 建虚拟环境、装依赖、跑脚本 |
 
-- **我只想学会最常用命令**：直接跳到「最值得先记住的一批命令」
-- **我只想查 alias**：直接跳到「常用 alias 说明」
-- **我已经跑过 setup，只想排错**：直接跳到「常见问题」
+如果你只想快速上手：
 
-### `fzf`
-一个**交互式选择器**。
-
-你可以把它理解成：
-
-> 在终端里弹出一个可搜索的小面板，让你边输入边筛选
-
-比如：
-
-- 选文件
-- 选目录
-- 选历史命令
-- 选搜索结果
-
-### `fd`
-一个比 `find` 更好用的找文件工具。
-
-你可以把它理解成：
-
-> 用更短、更顺手的方式找文件和目录
-
-### `rg`
-`ripgrep`，一个比 `grep` 更快、更适合搜代码的工具。
-
-你可以把它理解成：
-
-> 在一堆文件里搜关键字
-
-### `atuin`
-一个更好用的 shell 历史命令管理工具。
-
-你可以把它理解成：
-
-> 强化版命令历史搜索
-
-### `uv`
-一个现代 Python 工具链。
-
-你可以把它理解成：
-
-> 更快、更顺手的 Python 包和虚拟环境工具
+- 学命令：看「最值得先记住的一批命令」
+- 查缩写：看「常用 alias 说明」
+- 排错：看「常见问题」
 
 ---
 
 ## 最值得先记住的一批命令
 
-这部分是最重要的。  
-如果你是第一次接触 `fzf / fd / rg / atuin / uv`，优先把这些命令学会就够了。
-
-### 怎么读这部分
-
-下面统一按一种卡片格式来写：
-
-- **用途**：这个命令解决什么问题
-- **常用输入**：你平时最可能直接敲的写法
-- **实际执行 / 组合**：它背后大致调用了什么
-- **适合场景**：什么时候最值得用它
-
----
-
-### `ff`
-
-> **用途：交互式找文件，边搜边看预览。**
-
-**常用输入**
-
-```bash
-ff
-ff .
-ff src
-```
-
-**实际组合**
-
-- `fd` 找文件
-- `fzf` 做交互筛选
-- `bat` 做右侧预览
-
-**适合场景**
-
-- 记得文件名里大概有关键词，但不想慢慢找
-- 想快速定位某个配置文件
-- 想一边看内容一边选文件
-
----
-
-### `vf`
-
-> **用途：交互式选文件，然后直接用 `nvim` 打开。**
-
-**常用输入**
-
-```bash
-vf
-vf .
-vf src
-```
-
-**实际组合**
-
-- 先像 `ff` 一样选文件
-- 然后把结果交给 `nvim`
-
-**适合场景**
-
-- 想快速打开某个文件
-- 不想先找路径再手输文件名
-- 看到预览后确认就是它，直接进编辑
-
----
-
-### `cdf`
-
-> **用途：交互式选目录，然后直接切进去。**
-
-**常用输入**
-
-```bash
-cdf
-cdf .
-cdf ~/WKSpace
-```
-
-**实际组合**
-
-- `fd` 找目录
-- `fzf` 做筛选
-- 选中后执行 `cd`
-
-**适合场景**
-
-- 知道目录大概叫什么，但懒得一级一级 `cd`
-- 项目很多，想快速跳进去
-
----
-
-### `rgf keyword`
-
-> **用途：搜索关键字，并把结果放进一个可交互选择器。**
-
-**常用输入**
-
-```bash
-rgf TODO
-rgf bootstrap .
-rgf zprofile ~/.config
-```
-
-**实际组合**
-
-- `rg` 搜文本
-- `fzf` 展示结果
-- 右侧预览对应文件和高亮行
-
-**适合场景**
-
-- 在项目里找函数、配置、关键字
-- 想搜出一批结果后再挑一个继续看
-
----
-
-### `gs`
-
-> **用途：快速看 Git 当前状态。**
-
-**常用输入**
-
-```bash
-gs
-```
-
-**实际执行的是**
-
-```text
-git status -sb
-```
-
-**适合场景**
-
-- 我改了哪些文件
-- 当前在哪个分支
-- 有没有未提交内容
-
----
-
-### `glogg`
-
-> **用途：更直观地看 Git 提交历史。**
-
-**常用输入**
-
-```bash
-glogg
-glogg 50
-```
-
-**实际效果**
-
-- 用图形化分支线展示提交关系
-- 比普通 `git log` 更适合快速扫历史
-
-**适合场景**
-
-- 想看最近有哪些提交
-- 想快速理解分支和提交关系
-
----
-
-### `gnew feature/xxx`
-
-> **用途：快速新建并切换到一个新分支。**
-
-**常用输入**
-
-```bash
-gnew feature/login
-gnew fix/nvim-path
-```
-
-**实际执行的是**
-
-```text
-git switch -c <branch-name>
-```
-
-**适合场景**
-
-- 开一个新功能分支
-- 开一个修复分支
-
----
-
-### `lg`
-
-> **用途：打开终端里的 Git 图形界面。**
-
-**常用输入**
-
-```bash
-lg
-```
-
-**实际执行的是**
-
-```text
-lazygit
-```
-
-**适合场景**
-
-- 提交代码
-- 看 diff
-- 切分支
-- 推送 / 拉取
-
----
-
-### `hh`
-
-> **用途：搜索以前执行过的命令历史。**
-
-**常用输入**
-
-```bash
-hh
-```
-
-**实际执行的是**
-
-```text
-atuin search
-```
-
-**适合场景**
-
-- 以前跑过一条长命令，但忘了
-- 不想重新敲一遍
-
----
-
-### `hhi`
-
-> **用途：交互式搜索命令历史。**
-
-**常用输入**
-
-```bash
-hhi
-```
-
-**实际执行的是**
-
-```text
-atuin search --interactive
-```
-
-**适合场景**
-
-- 想一边翻历史一边找
-- 历史记录很多，普通搜索不够顺手
-
----
-
-### `uvinit`
-
-> **用途：在当前目录创建 Python 虚拟环境，并自动激活。**
-
-**常用输入**
-
-```bash
-uvinit
-uvinit 3.11
-```
-
-**默认行为**
-
-```text
-Python 3.12
-```
-
-**适合场景**
-
-- 新开一个 Python 项目
-- 想马上开始装依赖
-
----
-
-### `uvadd xxx`
-
-> **用途：给当前 Python 项目添加依赖。**
-
-**常用输入**
-
-```bash
-uvadd requests
-uvadd fastapi pydantic
-```
-
-**实际执行的是**
-
-```text
-uv add <package...>
-```
-
-**适合场景**
-
-- 给项目补运行时依赖
-- 不想记 `uv add` 的完整写法
-
----
-
-### `uvdev pytest`
-
-> **用途：给当前 Python 项目添加开发依赖。**
-
-**常用输入**
-
-```bash
-uvdev pytest
-uvdev pytest ruff mypy
-```
-
-**实际执行的是**
-
-```text
-uv add --dev <package...>
-```
-
-**适合场景**
-
-- 安装测试工具
-- 安装格式化工具
-- 安装 lint / 类型检查工具
-
----
-
-### `gor`
-
-> **用途：运行当前 Go 项目。**
-
-**常用输入**
-
-```bash
-gor
-```
-
-**实际执行的是**
-
-```text
-go run .
-```
-
-**适合场景**
-
-- 当前目录就是一个 Go 应用
-- 想快速跑起来看看
-
----
-
-### `got`
-
-> **用途：跑当前项目的全部 Go 测试。**
-
-**常用输入**
-
-```bash
-got
-```
-
-**实际执行的是**
-
-```text
-go test ./...
-```
-
-**适合场景**
-
-- 本地快速回归
-- 提交前先跑一遍 Go 测试
-
----
-
-### `gom`
-
-> **用途：整理 Go 模块依赖。**
-
-**常用输入**
-
-```bash
-gom
-```
-
-**实际执行的是**
-
-```text
-go mod tidy
-```
-
-**适合场景**
-
-- 加了依赖
-- 删了依赖
-- `go.mod` / `go.sum` 需要整理
+这部分只保留最常用、最值得先学的命令。
+
+### 文件 / 目录 / 搜索
+
+| 命令 | 最常见写法 | 用来干什么 |
+|---|---|---|
+| `ff` | `ff` / `ff src` | 交互式找文件并预览 |
+| `vf` | `vf` / `vf .` | 交互式选文件后直接用 Helix 打开 |
+| `cdf` | `cdf` / `cdf ~/WKSpace` | 交互式选目录并切进去 |
+| `rgf` | `rgf TODO` | 搜关键字，再从结果里挑一个继续看 |
+
+### Git
+
+| 命令 | 最常见写法 | 用来干什么 |
+|---|---|---|
+| `gs` | `gs` | 看当前仓库状态 |
+| `glogg` | `glogg` / `glogg 50` | 图形化看提交历史 |
+| `gnew` | `gnew feature/login` | 新建并切到一个分支 |
+
+### 历史命令
+
+| 命令 | 最常见写法 | 用来干什么 |
+|---|---|---|
+| `hh` | `hh` | 搜以前跑过的命令 |
+| `hhi` | `hhi` | 交互式翻历史命令 |
+
+### Python / uv
+
+| 命令 | 最常见写法 | 用来干什么 |
+|---|---|---|
+| `uvinit` | `uvinit` / `uvinit 3.11` | 创建并激活虚拟环境 |
+| `uvadd` | `uvadd requests` | 添加运行时依赖 |
+| `uvdev` | `uvdev pytest ruff` | 添加开发依赖 |
+
+### Go
+
+| 命令 | 最常见写法 | 用来干什么 |
+|---|---|---|
+| `gor` | `gor` | 运行当前 Go 项目 |
+| `got` | `got` | 跑全部 Go 测试 |
+| `gom` | `gom` | 整理 Go 模块依赖 |
 
 ---
 
@@ -791,8 +446,8 @@ go mod tidy
 
 | 你输入这个命令 | 实际执行的是 | 说明 |
 |---|---|---|
-| `vim` | `nvim` | 让你直接把 `vim` 当成 `nvim` 用 |
-| `vi` | `nvim` | 同上 |
+| `vim` | `hx` / `helix` | 让你直接把 `vim` 当成 Helix 用 |
+| `vi` | `hx` / `helix` | 同上 |
 | `c` | `clear` | 清屏 |
 | `rz` | `exec zsh -l` | 重新启动一个 login zsh |
 | `reloadz` | `exec zsh -l` | 同上 |
@@ -868,7 +523,6 @@ go mod tidy
 | `gst` | `git stash` | 暂存当前工作区改动 |
 | `gsta` | `git stash apply` | 应用某个 stash |
 | `gsp` | `git stash pop` | 应用并删除最近一个 stash |
-| `lg` | `lazygit` | 打开 lazygit |
 
 ---
 
@@ -938,7 +592,6 @@ rgf keyword
 ```bash
 gs
 glogg
-lg
 hh
 ```
 
@@ -946,7 +599,6 @@ hh
 
 - 看当前改动
 - 看提交历史
-- 用 TUI 做常见 Git 操作
 - 把以前跑过的长命令找回来
 
 ### 第 3 步：最后学项目运行
@@ -971,76 +623,29 @@ got
 
 ### `brew` 找不到
 
-**现象**
+| 现象 | 先查 | 常见原因 |
+|---|---|---|
+| `brew --version` 跑不起来 | `exec zsh -l`<br>`command -v brew`<br>`brew --version` | login shell 还没重进，`brew shellenv` 还没重新加载 |
 
-- `brew --version` 跑不起来
-- 明明装了 Homebrew，但当前 shell 里找不到
+### `vim` 变成 `hx`，但 `hx` 找不到
 
-**先查**
-
-```bash
-exec zsh -l
-command -v brew
-brew --version
-```
-
-**说明**
-
-- 这通常是 login shell 还没重进，`brew shellenv` 还没重新加载
-
-### `vim` 变成 `nvim`，但 `nvim` 找不到
-
-**现象**
-
-- `.zshrc` 生效了
-- 但 `nvim` 没装好，或者 PATH 不对
-
-**先查**
-
-```bash
-command -v nvim
-```
-
-**说明**
-
-- `vim` 被 alias 到了 `nvim`
-- 如果 `nvim` 本体没装好，就会出现这个现象
+| 现象 | 先查 | 常见原因 |
+|---|---|---|
+| `.zshrc` 生效了，但编辑器命令打不开 | `command -v hx`<br>`command -v helix` | `vim` / `vi` 被 alias 到了 `hx` / `helix`，但本体还没装好或 PATH 不对 |
 
 ### Linux 上 `fd` 不存在
 
-**现象**
-
-- 你输入 `fd`，系统提示命令不存在
-
-**说明**
-
-某些系统里命令名是：
-
-```bash
-fdfind
-```
-
-脚本里已经兼容了。
+| 现象 | 先查 | 常见原因 |
+|---|---|---|
+| 输入 `fd` 提示命令不存在 | `command -v fd`<br>`command -v fdfind` | 有些发行版把命令名装成了 `fdfind`；脚本已兼容 |
 
 ### Linux 上 `bat` 不存在
 
-**现象**
-
-- 你输入 `bat`，系统提示命令不存在
-
-**说明**
-
-某些系统里命令名是：
-
-```bash
-batcat
-```
-
-脚本里也已经兼容了。
+| 现象 | 先查 | 常见原因 |
+|---|---|---|
+| 输入 `bat` 提示命令不存在 | `command -v bat`<br>`command -v batcat` | 有些发行版把命令名装成了 `batcat`；脚本已兼容 |
 
 ### 我不想直接改太多，只想看会做什么
-
-**直接用这个命令**
 
 ```bash
 python3 setup.py --dry-run

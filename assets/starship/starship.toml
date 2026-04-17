@@ -1,0 +1,26 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+add_newline = false
+format = "$directory$git_branch$git_commit$character"
+
+[directory]
+format = "[ $path ](fg:#B45A56)"
+truncate_to_repo = false
+truncation_length = 99
+read_only = ""
+
+[git_branch]
+symbol = ""
+format = "[ git:](fg:#F5F5F5)[$branch ](fg:#B45A56)"
+truncation_length = 99
+truncation_symbol = ""
+
+[git_commit]
+only_detached = true
+commit_hash_length = 7
+format = "[ git:](fg:#F5F5F5)[$hash ](fg:#B45A56)"
+tag_disabled = true
+
+[character]
+success_symbol = ""
+error_symbol = ""
+vicmd_symbol = ""

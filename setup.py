@@ -176,14 +176,14 @@ class Bootstrap(object):
             "zypper": "tmux",
             "apk": "tmux",
         },
-        "neovim": {
-            "brew": "neovim",
-            "apt": "neovim",
-            "dnf": "neovim",
-            "yum": "neovim",
-            "pacman": "neovim",
-            "zypper": "neovim",
-            "apk": "neovim",
+        "helix": {
+            "brew": "helix",
+            "apt": "helix",
+            "dnf": "helix",
+            "yum": "helix",
+            "pacman": "helix",
+            "zypper": "helix",
+            "apk": "helix",
         },
         "htop": {
             "brew": "htop",
@@ -272,15 +272,6 @@ class Bootstrap(object):
             "zypper": "zoxide",
             "apk": "zoxide",
         },
-        "lazygit": {
-            "brew": "lazygit",
-            "apt": "lazygit",
-            "dnf": "lazygit",
-            "yum": "lazygit",
-            "pacman": "lazygit",
-            "zypper": "lazygit",
-            "apk": "lazygit",
-        },
         "atuin": {
             "brew": "atuin",
             "apt": "atuin",
@@ -305,14 +296,14 @@ class Bootstrap(object):
         "hammerspoon": {
             "brew_cask": "hammerspoon",
         },
-        "oh-my-posh": {
-            "brew": "oh-my-posh",
-            "apt": "oh-my-posh",
-            "dnf": "oh-my-posh",
-            "yum": "oh-my-posh",
-            "pacman": "oh-my-posh",
-            "zypper": "oh-my-posh",
-            "apk": "oh-my-posh",
+        "starship": {
+            "brew": "starship",
+            "apt": "starship",
+            "dnf": "starship",
+            "yum": "starship",
+            "pacman": "starship",
+            "zypper": "starship",
+            "apk": "starship",
         },
         "yq": {
             "brew": "yq",
@@ -336,7 +327,7 @@ class Bootstrap(object):
 
     def __init__(self, dry_run=False, only="all"):
         self.dry_run = dry_run
-        self.only = only
+        self.only = {"nvim": "helix"}.get(only, only)
         self.home = Path.home()
         self.system = platform.system().lower()
 
@@ -379,9 +370,8 @@ class Bootstrap(object):
         self.zsh_managed_dir = self.managed_root / "zsh"
         self.zsh_proxy_file = self.zsh_managed_dir / "proxy.env"
 
-        self.omp_dir = self.managed_root / "oh-my-posh"
-        self.omp_theme_file = self.omp_dir / "lambda.omp.json"
-        self.omp_theme_source_file = self.repo_root / "assets" / "oh-my-posh" / "lambda.omp.json"
+        self.starship_config_file = self.managed_root / "starship.toml"
+        self.starship_config_source_file = self.repo_root / "assets" / "starship" / "starship.toml"
 
         self.atuin_dir = self.config_home / "atuin"
         self.atuin_config_file = self.atuin_dir / "config.toml"
@@ -393,6 +383,9 @@ class Bootstrap(object):
         self.hammerspoon_init_file = self.hammerspoon_dir / "init.lua"
         self.hammerspoon_managed_file = self.hammerspoon_dir / "bootstrap-managed.lua"
 
+        self.helix_dir = self.config_home / "helix"
+        self.helix_config_file = self.helix_dir / "config.toml"
+        self.helix_config_source_file = self.repo_root / "assets" / "helix" / "config.toml"
         self.nvim_dir = self.config_home / "nvim"
         self.zinit_home = self.data_home / "zinit" / "zinit.git"
 
@@ -773,16 +766,15 @@ class Bootstrap(object):
             "fd",
             "fzf",
             "tmux",
-            "neovim",
+            "helix",
             "htop",
             "node",
             "go",
             "bat",
             "eza",
             "zoxide",
-            "lazygit",
             "atuin",
-            "oh-my-posh",
+            "starship",
             "yq",
             "you-get",
         ]
@@ -912,72 +904,25 @@ class Bootstrap(object):
         if not self.dry_run:
             info("zinit refreshed")
 
-    def ensure_lazyvim(self):
-        log("[7/8] managing Neovim / LazyVim")
-        self.clone_repo_to_path("https://github.com/LazyVim/starter", self.nvim_dir, strip_git=True)
+    def remove_managed_nvim_config(self):
+        marker = self.nvim_dir / ".bootstrap-managed"
+        if not marker.exists():
+            if self.nvim_dir.exists():
+                warn("existing ~/.config/nvim is not bootstrap-managed; leaving it untouched")
+            return
 
-        now_text = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.write_file_if_changed(
-            self.nvim_dir / "lazyvim.json",
-            """{
-  \"extras\": [
-    \"lazyvim.plugins.extras.coding.yanky\",
-    \"lazyvim.plugins.extras.editor.fzf\",
-    \"lazyvim.plugins.extras.editor.mini-files\",
-    \"lazyvim.plugins.extras.lang.json\",
-    \"lazyvim.plugins.extras.lang.markdown\",
-    \"lazyvim.plugins.extras.lang.toml\",
-    \"lazyvim.plugins.extras.lang.yaml\",
-    \"lazyvim.plugins.extras.ui.mini-animate\"
-  ],
-  \"version\": 6
-}
-""",
-            0o644,
-        )
+        if self.dry_run:
+            self.dry("would remove bootstrap-managed directory {0}".format(self.nvim_dir))
+            return
 
-        self.write_file_if_changed(
-            self.nvim_dir / ".neoconf.json",
-            """{
-  \"neodev\": {
-    \"library\": {
-      \"enabled\": true,
-      \"plugins\": true
-    }
-  },
-  \"neoconf\": {
-    \"plugins\": {
-      \"lua_ls\": {
-        \"enabled\": true
-      }
-    }
-  }
-}
-""",
-            0o644,
-        )
+        self.record_backup(self.nvim_dir)
+        shutil.rmtree(str(self.nvim_dir))
+        info("removed bootstrap-managed Neovim config")
 
-        self.write_file_if_changed(
-            self.nvim_dir / "lua" / "plugins" / "jj-escape.lua",
-            """return {
-  {
-    "LazyVim/LazyVim",
-    keys = {
-      { "jj", "<Esc>", mode = "i", desc = "Exit insert mode" },
-    },
-  },
-}
-""",
-            0o644,
-        )
-
-        self.write_file_if_changed(
-            self.nvim_dir / ".bootstrap-managed",
-            "managed_by=setup.py\nmanaged_at={0}\n".format(now_text),
-            0o644,
-        )
-        if not self.dry_run:
-            info("LazyVim refreshed")
+    def write_helix_config(self):
+        log("[7/8] managing Helix")
+        content = self.helix_config_source_file.read_text(encoding="utf-8")
+        self.write_file_if_changed(self.helix_config_file, content, 0o644)
 
     def write_proxy_file(self):
         if self.enable_proxy == "1":
@@ -1004,9 +949,9 @@ workspaces = true
 """
         self.write_file_if_changed(self.atuin_config_file, content, 0o644)
 
-    def write_omp_theme(self):
-        content = self.omp_theme_source_file.read_text(encoding="utf-8")
-        self.write_file_if_changed(self.omp_theme_file, content, 0o644)
+    def write_starship_config(self):
+        content = self.starship_config_source_file.read_text(encoding="utf-8")
+        self.write_file_if_changed(self.starship_config_file, content, 0o644)
 
     def write_zprofile(self):
         lines = [
@@ -1061,10 +1006,18 @@ if [ -f "__ZSH_PROXY_FILE__" ]; then
 fi
 
 export TERM="xterm-256color"
-export EDITOR="nvim"
-export VISUAL="nvim"
 export PAGER="less"
 export LESS="-FRX"
+
+if command -v hx >/dev/null 2>&1; then
+  export BOOTSTRAP_EDITOR_BIN="hx"
+elif command -v helix >/dev/null 2>&1; then
+  export BOOTSTRAP_EDITOR_BIN="helix"
+else
+  export BOOTSTRAP_EDITOR_BIN="vi"
+fi
+export EDITOR="${BOOTSTRAP_EDITOR_BIN}"
+export VISUAL="${BOOTSTRAP_EDITOR_BIN}"
 
 _fd_cmd() {
   if command -v fd >/dev/null 2>&1; then
@@ -1094,14 +1047,14 @@ _ls_cmd() {
   fi
 }
 
-if command -v oh-my-posh >/dev/null 2>&1 && [ "${TERM_PROGRAM:-}" != "Apple_Terminal" ]; then
-  eval "$(oh-my-posh init zsh --config "__OMP_THEME_FILE__")"
+if command -v starship >/dev/null 2>&1 && [ "${TERM_PROGRAM:-}" != "Apple_Terminal" ]; then
+  export STARSHIP_CONFIG="__STARSHIP_CONFIG_FILE__"
+  eval "$(starship init zsh)"
 fi
 
 ZINIT_HOME="__ZINIT_HOME__"
 if [ -f "${ZINIT_HOME}/zinit.zsh" ]; then
   source "${ZINIT_HOME}/zinit.zsh"
-  zinit snippet OMZP::git
   zinit snippet OMZP::sudo
   zinit light zsh-users/zsh-completions
 fi
@@ -1145,14 +1098,13 @@ if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"
 fi
 
-alias vim='nvim'
-alias vi='nvim'
+alias vim="${BOOTSTRAP_EDITOR_BIN}"
+alias vi="${BOOTSTRAP_EDITOR_BIN}"
 alias c='clear'
 alias rz='exec zsh -l'
 alias reloadz='exec zsh -l'
 alias md='mkdir -p'
 alias py='python3'
-alias lg='lazygit'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
@@ -1240,10 +1192,10 @@ alias got='go test ./...'
 alias gob='go build ./...'
 alias gom='go mod tidy'
 
-alias vzsh='nvim ~/.zshrc ~/.zprofile'
-alias vnvim='nvim ~/.config/nvim'
-alias vatuin='nvim ~/.config/atuin/config.toml'
-alias vboot='nvim "__HOME__/.zprofile" "__HOME__/.zshrc"'
+alias vzsh="${BOOTSTRAP_EDITOR_BIN} ~/.zshrc ~/.zprofile"
+alias vhelix="${BOOTSTRAP_EDITOR_BIN} ~/.config/helix/config.toml"
+alias vatuin="${BOOTSTRAP_EDITOR_BIN} ~/.config/atuin/config.toml"
+alias vboot="${BOOTSTRAP_EDITOR_BIN} \"__HOME__/.zprofile\" \"__HOME__/.zshrc\""
 
 alias yi='you-get -i'
 alias yc='you-get -c'
@@ -1280,7 +1232,7 @@ cdf() {
 vf() {
   local file
   file="$(ff "${1:-.}")" || return 1
-  [ -n "$file" ] && nvim "$file"
+  [ -n "$file" ] && "${BOOTSTRAP_EDITOR_BIN}" "$file"
 }
 
 cf() {
@@ -1401,10 +1353,6 @@ gocov() {
   go test ./... -cover
 }
 
-nconf() {
-  nvim ~/.config/nvim/lazyvim.json ~/.config/nvim/.neoconf.json
-}
-
 fkill() {
   local pid
   pid="$(ps -ef | sed 1d | fzf --height=80% --layout=reverse --border | awk '{print $2}')" || return 1
@@ -1419,7 +1367,7 @@ fport() {
         content = (
             template
             .replace("__ZSH_PROXY_FILE__", str(self.zsh_proxy_file))
-            .replace("__OMP_THEME_FILE__", str(self.omp_theme_file))
+            .replace("__STARSHIP_CONFIG_FILE__", str(self.starship_config_file))
             .replace("__ZINIT_HOME__", str(self.zinit_home))
             .replace("__CACHE_ZSH_DIR__", str(self.cache_home / "zsh"))
             .replace("__HOME__", str(self.home))
@@ -1570,7 +1518,7 @@ end
             ("fd", ["fd", "fdfind"]),
             ("fzf", ["fzf"]),
             ("tmux", ["tmux"]),
-            ("neovim", ["nvim"]),
+            ("helix", ["hx", "helix"]),
             ("python3", [Path(self.python_exe).name, "python3"]),
         ]
 
@@ -1589,7 +1537,7 @@ end
             ("node", ["node"]),
             ("uv", ["uv"]),
             ("atuin", ["atuin"]),
-            ("lazygit", ["lazygit"]),
+            ("starship", ["starship"]),
             ("code", ["code"]),
         ]
 
@@ -1653,7 +1601,7 @@ end
             self.ensure_zinit()
             self.write_proxy_file()
             self.write_atuin_config()
-            self.write_omp_theme()
+            self.write_starship_config()
             self.write_zprofile()
             self.write_zshrc()
             self.write_ghostty_files()
@@ -1662,8 +1610,9 @@ end
             self.install_hotkey_dependencies()
             self.write_hammerspoon_config()
 
-        if self.module_enabled("nvim"):
-            self.ensure_lazyvim()
+        if self.module_enabled("helix"):
+            self.remove_managed_nvim_config()
+            self.write_helix_config()
 
         if self.only == "all":
             self.health_check()
@@ -1687,7 +1636,7 @@ end
             log("  1. exec zsh -l")
             log("  2. echo $PATH")
             log("  3. code --version")
-            log("  4. nvim")
+            log("  4. hx")
             if self.system == "darwin" and self.ghostty_hotkey_enabled == "1":
                 log("  5. open Hammerspoon once, grant Accessibility, then reload config")
             else:
@@ -1703,7 +1652,7 @@ def parse_args():
     )
     parser.add_argument(
         "--only",
-        choices=["all", "packages", "shell", "nvim", "hotkey", "git"],
+        choices=["all", "packages", "shell", "helix", "nvim", "hotkey", "git"],
         default="all",
         help="run only one module",
     )
