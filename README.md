@@ -159,6 +159,7 @@ hx
 - `starship`
 - `yq`
 - `you-get`
+- `tlrc`（实际命令名是 `tldr`）
 
 ### 2. 安装 Python 用户级工具
 
@@ -338,6 +339,8 @@ jj -> <Esc>
 | `starship` | `starship explain` | 查看 prompt 是怎么生成的 |
 | `yq` | `yq . config.yaml` | 查看和处理 YAML |
 | `you-get` | `you-get -i <URL>` | 查看媒体链接可下载信息 |
+| `tldr` | `tldr git-commit` | 看命令的简明示例，而不是长 man page |
+| `cmdh` | `cmdh git commit` | 统一命令帮助入口：先看 tldr，再退到 `--help` / `man` |
 | `uv` | `uv run python main.py` | 更现代地运行 Python 项目或脚本 |
 
 ### 如果你只想先记住 8 个
@@ -400,6 +403,7 @@ jj -> <Esc>
 |---|---|---|
 | `hh` | `hh` | 搜以前跑过的命令 |
 | `hhi` | `hhi` | 交互式翻历史命令 |
+| `cmdh` | `cmdh tar` / `cmdh git commit` | 优先看 tldr，不够再退到帮助文本 |
 
 ### Python / uv
 
@@ -434,7 +438,7 @@ jj -> <Esc>
 | 改 shell / 打开编辑器 / 快速回目录 | [编辑器 / shell](#编辑器--shell) |
 | 看文件、列目录、树状浏览 | [文件列表 / 目录浏览](#文件列表--目录浏览) |
 | 看端口、看进程、看文件内容 | [查看文件 / 系统状态](#查看文件--系统状态) |
-| 查 JSON / YAML / 历史命令 | [JSON / YAML / 历史命令](#json--yaml--历史命令) |
+| 查 JSON / YAML / 历史命令 / 命令帮助 | [JSON / YAML / 历史命令](#json--yaml--历史命令) |
 | 处理 Git 日常操作 | [Git](#git) |
 | 管理 tmux session | [tmux](#tmux) |
 | 跑 Python / uv | [Python / uv](#python--uv) |
@@ -494,6 +498,30 @@ jj -> <Esc>
 | `hh` | `atuin search` | 搜历史命令 |
 | `hhi` | `atuin search --interactive` | 交互式搜历史命令 |
 | `hs` | `atuin stats` | 看历史命令统计 |
+| `t` | `tldr` | 直接查 tldr 示例页 |
+| `ts` | `tldr --search` | 按关键词搜索 tldr 页面 |
+| `tu` | `tldr --update` | 手动更新本地 tldr 缓存 |
+| `helpme` | `cmdh` | `cmdh` 的更直白别名 |
+
+---
+
+### TLDR / 命令速查
+
+| 你输入这个命令 | 实际执行的是 | 说明 |
+|---|---|---|
+| `t` | `tldr` | 用更短的示例页看命令用法 |
+| `ts` | `tldr --search` | 先按关键词搜命令，再打开对应页面 |
+| `tu` | `tldr --update` | 刷新本地页面缓存 |
+| `tldrp` | `tldr --list-all | fzf` 后打开 | 用 `fzf` 交互式选 tldr 页面 |
+| `cmdh` | `tldr -> --help -> man` | 统一命令帮助入口，适合“我就想知道怎么用” |
+| `helpme` | `cmdh` | `cmdh` 的别名 |
+
+你可以这样理解：
+
+- **想看最短示例**：`t git-commit`
+- **只记得关键词**：`ts archive`
+- **想统一走一个帮助入口**：`cmdh git commit`
+- **想交互式翻所有页**：`tldrp`
 
 ---
 

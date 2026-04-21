@@ -45,6 +45,7 @@ class InstallCorePackagesTests(unittest.TestCase):
                     "pkg-starship",
                     "pkg-yq",
                     "pkg-you-get",
+                    "pkg-tlrc",
                 ]
 
                 self.assertEqual(captured["packages"], expected)

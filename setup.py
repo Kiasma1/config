@@ -323,6 +323,9 @@ class Bootstrap(object):
             "zypper": "you-get",
             "apk": "you-get",
         },
+        "tlrc": {
+            "brew": "tlrc",
+        },
     }
 
     def __init__(self, dry_run=False, only="all"):
@@ -777,6 +780,7 @@ class Bootstrap(object):
             "starship",
             "yq",
             "you-get",
+            "tlrc",
         ]
         pkgs = []
         for key in keys:
@@ -1145,6 +1149,10 @@ fi
 alias j='jq'
 alias y='yq'
 alias hh='atuin search'
+alias t='tldr'
+alias ts='tldr --search'
+alias tu='tldr --update'
+alias helpme='cmdh'
 alias hhi='atuin search --interactive'
 alias hs='atuin stats'
 
@@ -1361,6 +1369,55 @@ fkill() {
 
 fport() {
   lsof -nP -iTCP -sTCP:LISTEN | sed 1d | fzf --height=80% --layout=reverse --border
+}
+
+tldrp() {
+  command -v tldr >/dev/null 2>&1 || { echo "tldr not found"; return 127; }
+  local page
+  page="$(tldr --list-all 2>/dev/null | fzf --height=80% --layout=reverse --border --prompt='tldr> ')" || return 1
+  [ -n "$page" ] && tldr "$page"
+}
+
+cmdh() {
+  [ "$#" -gt 0 ] || {
+    echo "usage: cmdh <command> [subcommand ...]"
+    echo "tip: use 'tldrp' for interactive tldr page selection"
+    return 1
+  }
+
+  local cmd="$1"
+  shift
+  local page="$cmd"
+  local part
+  for part in "$@"; do
+    page="${page}-${part}"
+  done
+
+  if command -v tldr >/dev/null 2>&1; then
+    if tldr "$page" 2>/dev/null; then
+      return 0
+    fi
+    if [ "$page" != "$cmd" ] && tldr "$cmd" 2>/dev/null; then
+      return 0
+    fi
+  fi
+
+  if command -v "$cmd" >/dev/null 2>&1; then
+    "$cmd" "$@" --help 2>/dev/null && return 0
+    "$cmd" --help 2>/dev/null && return 0
+  fi
+
+  if man "$page" >/dev/null 2>&1; then
+    man "$page"
+    return 0
+  fi
+  if [ "$page" != "$cmd" ] && man "$cmd" >/dev/null 2>&1; then
+    man "$cmd"
+    return 0
+  fi
+
+  echo "no help found for: $cmd${1:+ }$*"
+  return 1
 }
 '''
         finder_cmd = "open ." if self.system == "darwin" else "xdg-open ."
