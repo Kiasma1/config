@@ -105,5 +105,30 @@ class InstallOptionalSystemPackagesTests(unittest.TestCase):
                 self.assertEqual(font_calls, ["font"])
 
 
+class PartialHealthCheckTests(unittest.TestCase):
+    def test_partial_health_check_warns_about_shell_only_dependency_gaps(self):
+        with tempfile.TemporaryDirectory() as home_dir:
+            with mock.patch.dict(os.environ, {"HOME": home_dir}, clear=False):
+                bootstrap = setup.Bootstrap(dry_run=False, only="shell")
+                bootstrap.shell_any_command_exists = lambda cmds: False
+
+                bootstrap.partial_health_check()
+
+                self.assertIn("missing in real zsh shell after --only shell: starship", bootstrap.soft_failures[0])
+                self.assertIn("missing in real zsh shell after --only shell: helix", bootstrap.soft_failures[1])
+                self.assertIn("missing in real zsh shell after --only shell: tldr", bootstrap.soft_failures[2])
+
+    def test_partial_health_check_warns_about_helix_only_dependency_gaps(self):
+        with tempfile.TemporaryDirectory() as home_dir:
+            with mock.patch.dict(os.environ, {"HOME": home_dir}, clear=False):
+                bootstrap = setup.Bootstrap(dry_run=False, only="helix")
+                bootstrap.shell_any_command_exists = lambda cmds: False
+
+                bootstrap.partial_health_check()
+
+                self.assertEqual(len(bootstrap.soft_failures), 1)
+                self.assertIn("missing in real zsh shell after --only helix: helix", bootstrap.soft_failures[0])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -289,8 +289,23 @@ python3 setup.py --only git
 - `starship`
 - Ghostty 配置
 
+> 注意：`--only shell` **不会安装** `starship`、`helix`、`tlrc/tldr` 这些程序本体。  
+> 它只会写配置和 alias。新机器如果还没装过这些工具，请先跑：
+>
+> ```bash
+> python3 setup.py --only packages
+> ```
+>
+> 或直接跑全量：
+>
+> ```bash
+> python3 setup.py
+> ```
+
 #### `--only helix`
 只处理 Helix 配置。
+
+> 注意：`--only helix` **不会安装** `hx/helix` 可执行文件，只会写 `~/.config/helix/config.toml`。
 
 默认会写入一份 Helix 配置，包含插入模式下：
 
@@ -659,7 +674,13 @@ got
 
 | 现象 | 先查 | 常见原因 |
 |---|---|---|
-| `.zshrc` 生效了，但编辑器命令打不开 | `command -v hx`<br>`command -v helix` | `vim` / `vi` 被 alias 到了 `hx` / `helix`，但本体还没装好或 PATH 不对 |
+| `.zshrc` 生效了，但编辑器命令打不开 | `command -v hx`<br>`command -v helix` | `vim` / `vi` 被 alias 到了 `hx` / `helix`，但本体还没装好、PATH 不对，或者你只跑了 `--only shell` / `--only helix` 而没先装 packages |
+
+### 跑了 `--only shell`，但还是默认 prompt / `tldr` 不能用
+
+| 现象 | 先查 | 常见原因 |
+|---|---|---|
+| prompt 还是默认 `%`，或 `t` / `cmdh` 找不到 `tldr` | `command -v starship`<br>`command -v tldr` | `--only shell` 只写配置，不安装 `starship` / `tlrc`；新机器需要先跑 `python3 setup.py --only packages` 或全量执行 |
 
 ### Linux 上 `fd` 不存在
 

@@ -1557,6 +1557,45 @@ end
                 return True
         return False
 
+    def partial_health_check(self):
+        if self.dry_run:
+            return
+
+        checks = []
+        if self.only == "shell":
+            checks = [
+                (
+                    "starship",
+                    ["starship"],
+                    "prompt will fall back to the default shell prompt; run `python3 setup.py --only packages` or install starship manually",
+                ),
+                (
+                    "helix",
+                    ["hx", "helix"],
+                    "editor shortcuts will fall back to vi; run `python3 setup.py --only packages` or install helix manually",
+                ),
+                (
+                    "tldr",
+                    ["tldr"],
+                    "t / ts / tu / cmdh shortcuts will be partially unavailable; run `python3 setup.py --only packages` or install tlrc manually",
+                ),
+            ]
+        elif self.only == "helix":
+            checks = [
+                (
+                    "helix",
+                    ["hx", "helix"],
+                    "Helix config was written but the editor binary is missing; run `python3 setup.py --only packages` or install helix manually",
+                ),
+            ]
+
+        for label, cmds, guidance in checks:
+            if self.shell_any_command_exists(cmds):
+                continue
+            message = "missing in real zsh shell after --only {0}: {1} ({2})".format(self.only, label, guidance)
+            warn(message)
+            self.soft_failures.append(message)
+
     def health_check(self):
         log("[8/8] health check")
 
@@ -1677,6 +1716,7 @@ end
             self.dry("would skip full health check because --only is not all")
         else:
             info("skipped full health check because --only is not all")
+            self.partial_health_check()
 
         if self.module_enabled("git"):
             self.apply_git_config()
