@@ -57,12 +57,13 @@ class StarshipConfigTests(unittest.TestCase):
         )
 
         self.assertIn('palette = "bootstrap"', expected)
-        self.assertIn('format = "$directory$git_branch$git_commit$git_state$git_status$status$character"', expected)
+        self.assertIn('format = "$directory$git_branch$git_commit$status$character"', expected)
         self.assertIn('right_format = "$cmd_duration"', expected)
         self.assertIn('format = "[ · ](fg:muted)[git:](fg:foreground)[$branch](fg:accent)"', expected)
         self.assertIn('format = "[ · exit:$status](fg:error)"', expected)
         self.assertIn('success_symbol = "[ λ ](fg:accent)"', expected)
-        self.assertIn('[git_status]', expected)
+        self.assertNotIn('[git_status]', expected)
+        self.assertNotIn('[git_state]', expected)
 
 
 class ZshrcGenerationTests(unittest.TestCase):
